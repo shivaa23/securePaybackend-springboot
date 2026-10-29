@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      # validate asserts entity<->table alignment without altering schema (doc 06 §6.1).
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    com.securepay: INFO
+    root: WARN
+
+springdoc:
+  swagger-ui:
+    enabled: false

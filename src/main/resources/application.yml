@@ -1,0 +1,159 @@
+spring:
+  application:
+    name: securepay-springboot
+  # Optional local secrets file (KEY=VALUE lines) at the project root; real env vars still win.
+  config:
+    import: "optional:file:./.env[.properties]"
+
+  # Receipt uploads (fund requests) are limited to 2MB by the app; allow headroom for multipart overhead.
+  servlet:
+    multipart:
+      max-file-size: 3MB
+      max-request-size: 4MB
+
+  # Same MySQL database as the legacy backend (doc 06 §6.1). Credentials from env.
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_DATABASE:homestead}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata&zeroDateTimeBehavior=convertToNull
+    username: ${DB_USERNAME:homestead}
+    password: ${DB_PASSWORD:secret}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: securepay-hikari
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN:5}
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  jpa:
+    # HARD CONSTRAINT: never auto-migrate. Same DB, same tables (doc 06 §6.1).
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+        format_sql: false
+
+  # Jackson parity config (doc 08 §8.3): preserve unicode literally, do not blanket-omit nulls.
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    mapper:
+      sort-properties-alphabetically: false
+    time-zone: Asia/Kolkata
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+          connectiontimeout: 8000
+          timeout: 8000
+          writetimeout: 8000
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Match legacy error handling: never leak Spring's default /error JSON (doc 08 §8.4).
+  error:
+    whitelabel:
+      enabled: false
+    include-message: never
+    include-binding-errors: never
+
+# Internal-only actuator (doc 09 Phase 1)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+      show-components: always
+  health:
+    # Mail server is optional in local/dev; don't fail overall health when it's absent.
+    mail:
+      enabled: false
+
+# All SecurePay secrets/keys sourced from env (doc 07 §7.6). Never hardcode in prod.
+securepay:
+  crypto:
+    # Legacy APP_KEY (base64:... form). Used for wallet column Crypt (AES-256-CBC).
+    app-key: ${APP_KEY:}
+    # Request/response AES-128-CBC envelope key + HMAC-SHA256 key.
+    user-encryptdata-key: ${USER_ENCRYPTDATA_KEY:}
+    user-encryptdata-iv: ${USER_ENCRYPTDATA_IV:}
+  auth:
+    # Peppers for bcrypt password / OTP / MPIN (doc 07 §7.1).
+    pass-key: ${PASS_KEY:}
+    otp-key: ${OTP_KEY:}
+    pin-key: ${PIN_KEY:}
+    # Allowed User-Agent prefixes for signIn (doc 07 §7.1).
+    allowed-user-agents: Transup/1.0,ImpsguruAppWeb/1.0,Mozilla
+    # Stateless JWT login token (not stored in the DB). Secret from env in prod.
+    jwt-secret: ${JWT_SECRET:}
+    jwt-ttl-minutes: ${JWT_TTL_MINUTES:720}
+  app:
+    environment-label: Live
+    timezone: Asia/Kolkata
+  otp:
+    # Fixed inbox for OTP mails (blank => user's own email). SMTP creds via MAIL_* env.
+    mail-to: ${OTP_MAIL_TO:}
+    mail-from: ${OTP_MAIL_FROM:}
+    log-fallback: false
+  providers:
+    simulate: false
+    abhayam-pay-key: ${ABHAYAM_PAY_KEY:}
+    abhayam-pay-mpin: ${ABHAYAM_PAY_MPIN:}
+    utkal-pay-key: ${UTKAL_PAY_KEY:}
+    utkal-pay-mpin: ${UTKAL_PAY_MPIN:}
+    # ImpsGuru
+    guru-hkey: ${GURU_HKEY:}
+    guru-token: ${GURU_TOKEN:}
+    # Paysprint
+    key-prod: ${KEY_PROD:}
+    ps-partner-id: ${PS_PARTNER_ID:PS004357}
+    # Ipay / InstantPay
+    ipay-client-id: ${IPAY_CLIENTID:}
+    ipay-secret: ${IPAY_SECRET:}
+    # Soliteck
+    soliteck-client-id: ${SOLITECK_CLIENT_ID:}
+    soliteck-client-pass: ${SOLITECK_CLIENT_PASS:}
+    soliteck-client-tpin: ${SOLITECK_CLIENT_TPIN:}
+    soliteck-client-secret: ${SOLITECK_CLIENT_SECRET:}
+    # Enkash
+    enkash-username: ${ENKASH_USERNAME:}
+    enkash-password: ${ENKASH_PASSWORD:}
+    enkash-client-id: ${ENKASH_CLIENT_ID:}
+    enkash-basic-auth: ${ENKASH_BASIC_AUTH:}
+    # DigiKhata (Paypoint QR)
+    digikhata-merchant-id: ${DIGIKHATA_MERCHANT_ID:}
+    digikhata-auth-key: ${DIGIKHATA_AUTH_KEY:}
+    digikhata-interface-key: ${DIGIKHATA_INTERFACE_KEY:}
+    digikhata-identification-code: ${DIGIKHATA_IDENTIFICATION_CODE:}
+    pay2all-token: ${PAY2ALL_TOKEN:}
+    # FingPay
+    fingpay-client-id: ${FINGPAY_CLIENT_ID:}
+    fingpay-client-secret: ${FINGPAY_CLIENT_SECRET:}
+    fingpay-recon-key: ${FINGPAY_RECON_KEY:}
+    fingpay-public-cert: ${FINGPAY_PUBLIC_CERT:fingpay_public_production.cer}
+  recharge:
+    # Recharge aggregator operator tokens (doc 07 §7.6)
+    wb-token: ${WB_TOKEN:}
+    shk-token: ${SHK_TOKEN:}
+    mr1-token: ${MR1_TOKEN:}
+    aone-token: ${AONE_TOKEN:}
+    indicore-signature: ${INDICORE_SIGNATURE:}
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}

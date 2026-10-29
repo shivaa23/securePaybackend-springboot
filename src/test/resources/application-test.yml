@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:securepay;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      # Context-load test only checks mapping/bean wiring, not schema. Keep none (same as prod rule).
+      ddl-auto: none
+    database-platform: org.hibernate.dialect.H2Dialect
+
+securepay:
+  crypto:
+    app-key: "base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+    user-encryptdata-key: "1234567890123456"
+    user-encryptdata-iv: "6543210987654321"
+  auth:
+    pass-key: "test-pass"
+    otp-key: "test-otp"
+    pin-key: "test-pin"
+    allowed-user-agents: "Transup/1.0,ImpsguruAppWeb/1.0,Mozilla"
+  app:
+    environment-label: "Live"
+    timezone: "Asia/Kolkata"
